@@ -92,7 +92,7 @@ def notes():
             c = db.cursor()
             ## sql injection problem, can be used to run SELECT statements -FIXED
             statement = """SELECT * from NOTES where publicID = ?"""
-            params = (noteid)
+            params = (noteid,)
 
             c.execute(statement, params)
             ## result is a list of lists
@@ -105,7 +105,7 @@ def notes():
                 row = result[0]
                 # Risk of SQL injection - FIXED
                 statement = """INSERT INTO notes(id,assocUser,dateWritten,note,publicID) VALUES(null,?,?,?,?);""" 
-                params = (session['userid'],row[2],row[3],row[4])
+                params = (session['userid'],row[2],row[3],row[4],)
                 # when you import a note, its duplicated with the same date, noteid, and note fields are same
                 # but userid is updated with importer 
                 # so this 'if check' will get more than one outputs for noteid check, and only insert the first one
@@ -122,10 +122,9 @@ def notes():
 
     #SQL injection - FIXED
     statement = "SELECT * FROM notes WHERE assocUser = ?;"
-    params = (session['userid'])
+    params = (session['userid'],)
     
-    print(statement, params)
-    c.execute(statement)
+    c.execute(statement, params)
     notes = c.fetchall()
     print(notes)
     
@@ -143,7 +142,7 @@ def login():
         # Allows for injection - FIXED 
         # password should be hashed (idea: concatinate username and password before hash, this will create unique hashes) 
         statement = "SELECT * FROM users WHERE username = ? AND password = ?;"
-        params = (username, password) 
+        params = (username, password,) 
 
         c.execute(statement, params)
         result = c.fetchall()
@@ -176,7 +175,7 @@ def register():
         # sanitize input, to avoid SQL injection - FIXED
         # delete passStatement + first if statement -FIXED
         user_statement = """SELECT * FROM users WHERE username = ?;"""
-        params = (username)
+        params = (username,)
 
         if(len(password)<7):
             errored = True
@@ -191,7 +190,7 @@ def register():
             # sanitize input to avoid SQL injection - FIXED
             # Password should be hashed before being inserted, make sure that password checks are alligned,
             statement = """INSERT INTO users(id,username,password) VALUES(null,?,?);"""
-            params = (username,password)
+            params = (username, password,)
 
             c.execute(statement, params)
             db.commit()
