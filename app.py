@@ -71,8 +71,8 @@ def notes():
             note = request.form['noteinput']
             db = connect_db()
             c = db.cursor()
-            ## line 77 has sql injection vulnerability and problem in note id generation
-            ## there can be conflicts with the ids even though a low chance
+            # line 77 has sql injection vulnerability - FIXED
+            # Possibility of duplicate IDs  
         
             statement = """INSERT INTO notes (id, assocUser, dateWritten, note, publicID)
                    VALUES (NULL, ?, ?, ?, ?)"""
@@ -90,22 +90,27 @@ def notes():
             noteid = request.form['noteid']
             db = connect_db()
             c = db.cursor()
-            ## sql injection problem, can be used to run SELECT statements
-            statement = """SELECT * from NOTES where publicID = %s""" %noteid
-            c.execute(statement)
+            ## sql injection problem, can be used to run SELECT statements -FIXED
+            statement = """SELECT * from NOTES where publicID = ?"""
+            params = (noteid)
+
+            c.execute(statement, params)
             ## result is a list of lists
             result = c.fetchall()
             if(len(result)>0):
                 # every user have a list of notes, and one note is a list by itself with the information fields about the note
-                
+        
                 # row is a single list of the individual note
                 # row is the first note with that searched noteid
                 row = result[0]
-                statement = """INSERT INTO notes(id,assocUser,dateWritten,note,publicID) VALUES(null,%s,'%s','%s',%s);""" %(session['userid'],row[2],row[3],row[4])
+                # Risk of SQL injection - FIXED
+                statement = """INSERT INTO notes(id,assocUser,dateWritten,note,publicID) VALUES(null,?,?,?,?);""" 
+                params = (session['userid'],row[2],row[3],row[4])
                 # when you import a note, its duplicated with the same date, noteid, and note fields are same
-                # but userid is updated with importer
-                # so this if check will get more than one outputs for noteid check, and only insert the first one
-                c.execute(statement)
+                # but userid is updated with importer 
+                # so this 'if check' will get more than one outputs for noteid check, and only insert the first one
+                # This creates an integrety problem, as the original author will be changed
+                c.execute(statement, params)
             else:
                 importerror="No such note with that ID!"
             db.commit()
@@ -114,8 +119,12 @@ def notes():
     db = connect_db()
     c = db.cursor()
     # Runs when we open the page
-    statement = "SELECT * FROM notes WHERE assocUser = %s;" %session['userid']
-    print(statement)
+
+    #SQL injection - FIXED
+    statement = "SELECT * FROM notes WHERE assocUser = ?;"
+    params = (session['userid'])
+    
+    print(statement, params)
     c.execute(statement)
     notes = c.fetchall()
     print(notes)
@@ -131,9 +140,12 @@ def login():
         password = request.form['password']
         db = connect_db()
         c = db.cursor()
-        # Allows for injection, needs to be sanitized and password hashed (idea: concatinate username and password before hash, this will create unique hashes) 
-        statement = "SELECT * FROM users WHERE username = '%s' AND password = '%s';" %(username, password) 
-        c.execute(statement)
+        # Allows for injection - FIXED 
+        # password should be hashed (idea: concatinate username and password before hash, this will create unique hashes) 
+        statement = "SELECT * FROM users WHERE username = ? AND password = ?;"
+        params = (username, password) 
+
+        c.execute(statement, params)
         result = c.fetchall()
 
         if len(result) > 0:
@@ -161,25 +173,27 @@ def register():
         password = request.form['password']
         db = connect_db()
         c = db.cursor()
-        # sanitize input, to avoid SQL injection, delete passStatement + first if statement
-        pass_statement = """SELECT * FROM users WHERE password = '%s';""" %password
-        user_statement = """SELECT * FROM users WHERE username = '%s';""" %username
-        c.execute(pass_statement)
-        if(len(c.fetchall())>0):
-            errored = True
-            passworderror = "That password is already in use by someone else!"
+        # sanitize input, to avoid SQL injection - FIXED
+        # delete passStatement + first if statement -FIXED
+        user_statement = """SELECT * FROM users WHERE username = ?;"""
+        params = (username)
 
-        c.execute(user_statement)
+        if(len(password)<7):
+            errored = True
+            passworderror = "That password to weak, must be at least 7 characters!"
+
+        c.execute(user_statement, params)
         if(len(c.fetchall())>0):
             errored = True
             usererror = "That username is already in use by someone else!"
 
         if(not errored):
-            # sanitize input to avoid SQL injection
+            # sanitize input to avoid SQL injection - FIXED
             # Password should be hashed before being inserted, make sure that password checks are alligned,
-            statement = """INSERT INTO users(id,username,password) VALUES(null,'%s','%s');""" %(username,password)
-            print(statement)
-            c.execute(statement)
+            statement = """INSERT INTO users(id,username,password) VALUES(null,?,?);"""
+            params = (username,password)
+
+            c.execute(statement, params)
             db.commit()
             db.close()
             return f"""<html>
