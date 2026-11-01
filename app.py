@@ -1,7 +1,5 @@
 import json, sqlite3, click, functools, os, hashlib,time, secrets, sys
 from flask import Flask, current_app, g, session, redirect, render_template, url_for, request
-from sqlalchemy import text
-
 
 
 ### DATABASE FUNCTIONS ###
