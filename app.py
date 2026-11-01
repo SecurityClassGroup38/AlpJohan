@@ -116,7 +116,7 @@ def notes():
     
     return render_template('notes.html',notes=notes,importerror=importerror)
 
-## left here for inspection
+
 @app.route("/login/", methods=('GET', 'POST'))
 def login():
     error = ""
@@ -125,12 +125,14 @@ def login():
         password = request.form['password']
         db = connect_db()
         c = db.cursor()
-        statement = "SELECT * FROM users WHERE username = '%s' AND password = '%s';" %(username, password)
+        # Allows for injection, needs to be sanitized and password hashed (idea: concatinate username and password before hash, this will create unique hashes) 
+        statement = "SELECT * FROM users WHERE username = '%s' AND password = '%s';" %(username, password) 
         c.execute(statement)
         result = c.fetchall()
 
         if len(result) > 0:
             session.clear()
+            # we are both using "logged in", "user ID", and "username" in a session, this can be redundant and possibly a risk (if loggedIn is not reset on logout)
             session['logged_in'] = True
             session['userid'] = result[0][0]
             session['username']=result[0][1]
@@ -143,6 +145,7 @@ def login():
 @app.route("/register/", methods=('GET', 'POST'))
 def register():
     errored = False
+    # get rid of password error (deos not have to be unique), however can be changed to enforce strong passwords
     usererror = ""
     passworderror = ""
     if request.method == 'POST':
@@ -152,6 +155,7 @@ def register():
         password = request.form['password']
         db = connect_db()
         c = db.cursor()
+        # sanitize input, to avoid SQL injection, delete passStatement + first if statement
         pass_statement = """SELECT * FROM users WHERE password = '%s';""" %password
         user_statement = """SELECT * FROM users WHERE username = '%s';""" %username
         c.execute(pass_statement)
@@ -165,6 +169,8 @@ def register():
             usererror = "That username is already in use by someone else!"
 
         if(not errored):
+            # sanitize input to avoid SQL injection
+            # Password should be hashed before being inserted, make sure that password checks are alligned,
             statement = """INSERT INTO users(id,username,password) VALUES(null,'%s','%s');""" %(username,password)
             print(statement)
             c.execute(statement)
