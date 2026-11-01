@@ -1,6 +1,6 @@
-import json, sqlite3, click, functools, os, hashlib,time, random, sys
+import json, sqlite3, click, functools, os, hashlib,time, secrets, sys
 from flask import Flask, current_app, g, session, redirect, render_template, url_for, request
-
+from sqlalchemy import text
 
 
 
@@ -75,9 +75,17 @@ def notes():
             c = db.cursor()
             ## line 77 has sql injection vulnerability and problem in note id generation
             ## there can be conflicts with the ids even though a low chance
-            statement = """INSERT INTO notes(id,assocUser,dateWritten,note,publicID) VALUES(null,%s,'%s','%s',%s);""" %(session['userid'],time.strftime('%Y-%m-%d %H:%M:%S'),note,random.randrange(1000000000, 9999999999))
-            print(statement)
-            c.execute(statement)
+        
+            statement = """INSERT INTO notes (id, assocUser, dateWritten, note, publicID)
+                   VALUES (NULL, ?, ?, ?, ?)"""
+            params = (
+                session['userid'],
+                time.strftime('%Y-%m-%d %H:%M:%S'),
+                note,
+                secrets.randbelow(9000000000) + 1000000000,
+            )
+
+            c.execute(statement, params)
             db.commit()
             db.close()
         elif request.form['submit_button'] == 'import note':
