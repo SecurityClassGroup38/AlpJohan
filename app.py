@@ -19,6 +19,7 @@ DROP TABLE IF EXISTS notes;
 CREATE TABLE notes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     assocUser INTEGER NOT NULL,
+    author INTEGER NOT NULL,
     dateWritten DATETIME NOT NULL,
     note TEXT NOT NULL,
     publicID INTEGER NOT NULL
@@ -32,8 +33,8 @@ CREATE TABLE users (
 
 INSERT INTO users VALUES(null,"admin", "password");
 INSERT INTO users VALUES(null,"bernardo", "omgMPC");
-INSERT INTO notes VALUES(null,2,"1993-09-23 10:10:10","hello my friend",1234567890);
-INSERT INTO notes VALUES(null,2,"1993-09-23 12:10:10","i want lunch pls",1234567891);
+INSERT INTO notes VALUES(null,2,2,"1993-09-23 10:10:10","hello my friend",1234567890);
+INSERT INTO notes VALUES(null,2,2,"1993-09-23 12:10:10","i want lunch pls",1234567891);
 
 """)
 
@@ -65,6 +66,14 @@ def index():
 @login_required
 def notes():
     importerror=""
+
+    def newNotePublicID(c):
+        while True:
+            id = secrets.randbelow(9000000000) + 1000000000
+            c.execute("SELECT 1 FROM notes WHERE publicID = ?", (id,))
+            if c.fetchone() is None:
+                return id
+
     #Posting a new note:
     if request.method == 'POST':
         if request.form['submit_button'] == 'add note':
@@ -74,13 +83,14 @@ def notes():
             # line 77 has sql injection vulnerability - FIXED
             # Possibility of duplicate IDs  
         
-            statement = """INSERT INTO notes (id, assocUser, dateWritten, note, publicID)
-                   VALUES (NULL, ?, ?, ?, ?)"""
+            statement = """INSERT INTO notes (id, assocUser, author, dateWritten, note, publicID)
+                   VALUES (NULL, ?, ?, ?, ?, ?)"""
             params = (
+                session['userid'],
                 session['userid'],
                 time.strftime('%Y-%m-%d %H:%M:%S'),
                 note,
-                secrets.randbelow(9000000000) + 1000000000,
+                newNotePublicID(c),
             )
 
             c.execute(statement, params)
@@ -104,8 +114,9 @@ def notes():
                 # row is the first note with that searched noteid
                 row = result[0]
                 # Risk of SQL injection - FIXED
-                statement = """INSERT INTO notes(id,assocUser,dateWritten,note,publicID) VALUES(null,?,?,?,?);""" 
-                params = (session['userid'],row[2],row[3],row[4],)
+                statement = """INSERT INTO notes(id,assocUser,author,dateWritten,note,publicID) VALUES(null,?,?,?,?,?);""" 
+                # add author of note (integrety)
+                params = (session['userid'],row[2],row[3],row[4],row[5],)
                 # when you import a note, its duplicated with the same date, noteid, and note fields are same
                 # but userid is updated with importer 
                 # so this 'if check' will get more than one outputs for noteid check, and only insert the first one
@@ -152,7 +163,8 @@ def login():
         print("Stored hash: " + stored_hash + " User input: " + password  )
         if check_password_hash(stored_hash, password):
             session.clear()
-            # we are both using "logged in", "user ID", and "username" in a session, this can be redundant and possibly a risk (if loggedIn is not reset on logout)
+            # we are both using "logged in", "user ID", and "username" in a session, 
+            # this can be redundant and possibly a risk (if loggedIn is not reset on logout)
             session['logged_in'] = True
             session['userid'] = result[0][0]
             session['username']=result[0][1]
@@ -214,7 +226,6 @@ def register():
                         </body>
                         </html>
                         """
-        
         db.commit()
         db.close()
     return render_template('register.html',usererror=usererror,passworderror=passworderror)
