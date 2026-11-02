@@ -149,6 +149,7 @@ def login():
         c.execute(statement, params)
         result = c.fetchall()
         stored_hash = result[0][2]
+        print("Stored hash: " + stored_hash + " User input: " + password  )
         if check_password_hash(stored_hash, password):
             session.clear()
             # we are both using "logged in", "user ID", and "username" in a session, this can be redundant and possibly a risk (if loggedIn is not reset on logout)
@@ -197,6 +198,7 @@ def register():
                 password,
                 method="scrypt"
             )
+            print("Hashed pass: " + hashed_password + " User input: " + password  )
             statement = """INSERT INTO users(id,username,password) VALUES(null,?,?);"""
             params = (username, hashed_password,)
 
