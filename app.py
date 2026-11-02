@@ -159,17 +159,19 @@ def login():
 
         c.execute(statement, params)
         result = c.fetchall()
-        stored_hash = result[0][2]
-        print("Stored hash: " + stored_hash + " User input: " + password  )
-        if check_password_hash(stored_hash, password):
-            session.clear()
-            # we are both using "logged in", "user ID", and "username" in a session, 
-            # this can be redundant and possibly a risk (if loggedIn is not reset on logout)
-            session['logged_in'] = True
-            session['userid'] = result[0][0]
-            session['username']=result[0][1]
-            return redirect(url_for('index'))
-
+        if(len(result)!= 0):
+            stored_hash = result[0][2]
+            print("Stored hash: " + stored_hash + " User input: " + password  )
+            if check_password_hash(stored_hash, password):
+                session.clear()
+                # we are both using "logged in", "user ID", and "username" in a session, 
+                # this can be redundant and possibly a risk (if loggedIn is not reset on logout)
+                session['logged_in'] = True
+                session['userid'] = result[0][0]
+                session['username']=result[0][1]
+                return redirect(url_for('index'))
+            else:
+                        error = "Wrong username or password!"
         
         else:
             error = "Wrong username or password!"
