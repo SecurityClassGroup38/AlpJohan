@@ -1,6 +1,6 @@
 import json, sqlite3, click, functools, os, hashlib,time, secrets, sys
 from flask import Flask, current_app, g, session, redirect, render_template, url_for, request
-
+from werkzeug.security import generate_password_hash, check_password_hash
 
 ### DATABASE FUNCTIONS ###
 
@@ -139,21 +139,25 @@ def login():
         password = request.form['password']
         db = connect_db()
         c = db.cursor()
+        
+    
         # Allows for injection - FIXED 
         # password should be hashed (idea: concatinate username and password before hash, this will create unique hashes) 
-        statement = "SELECT * FROM users WHERE username = ? AND password = ?;"
-        params = (username, password,) 
+        statement = "SELECT * FROM users WHERE username = ?;"
+        params = (username,) 
 
         c.execute(statement, params)
         result = c.fetchall()
-
-        if len(result) > 0:
+        stored_hash = result[0][2]
+        if check_password_hash(stored_hash, password):
             session.clear()
             # we are both using "logged in", "user ID", and "username" in a session, this can be redundant and possibly a risk (if loggedIn is not reset on logout)
             session['logged_in'] = True
             session['userid'] = result[0][0]
             session['username']=result[0][1]
             return redirect(url_for('index'))
+
+        
         else:
             error = "Wrong username or password!"
     return render_template('login.html',error=error)
@@ -189,8 +193,12 @@ def register():
         if(not errored):
             # sanitize input to avoid SQL injection - FIXED
             # Password should be hashed before being inserted, make sure that password checks are alligned,
+            hashed_password = generate_password_hash(
+                password,
+                method="scrypt"
+            )
             statement = """INSERT INTO users(id,username,password) VALUES(null,?,?);"""
-            params = (username, password,)
+            params = (username, hashed_password,)
 
             c.execute(statement, params)
             db.commit()
