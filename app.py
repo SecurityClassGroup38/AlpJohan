@@ -196,7 +196,7 @@ def register():
             # Password should be hashed before being inserted, make sure that password checks are alligned,
             hashed_password = generate_password_hash(
                 password,
-                method="scrypt"
+                method="pbkdf2:sha256:600000"
             )
             print("Hashed pass: " + hashed_password + " User input: " + password  )
             statement = """INSERT INTO users(id,username,password) VALUES(null,?,?);"""
