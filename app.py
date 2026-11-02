@@ -19,7 +19,7 @@ DROP TABLE IF EXISTS notes;
 CREATE TABLE notes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     assocUser INTEGER NOT NULL,
-    author INTEGER NOT NULL,
+    author TEXT NOT NULL,
     dateWritten DATETIME NOT NULL,
     note TEXT NOT NULL,
     publicID INTEGER NOT NULL
@@ -87,7 +87,7 @@ def notes():
                    VALUES (NULL, ?, ?, ?, ?, ?)"""
             params = (
                 session['userid'],
-                session['userid'],
+                session['username'],
                 time.strftime('%Y-%m-%d %H:%M:%S'),
                 note,
                 newNotePublicID(c),
