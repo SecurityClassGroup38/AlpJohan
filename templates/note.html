@@ -23,8 +23,20 @@
       <span class="notes__card-subtitle--date">{{ note[3] }}</span>
     </h6>
     <p class="card-text">{{ note[4] }}</p>
-    <button href="#" class="card-link card-delete-button btn-outline-sm">
-      Delete
-    </button>
+    <div class="notes__card-actions">
+      {% if note[7] == 0 %}
+      <form
+        action="{{ url_for('toggle_public', note_id=note[0]) }}"
+        method="post"
+      >
+        <button type="submit" class="btn-outline-sm">
+          {{ "Unpublish" if note[6] else "Publish" }}
+        </button>
+      </form>
+      {% else %}
+      <span class="notes__card-subtitle">Imported</span>
+      {% endif %}
+      <button class="btn-outline-sm">Delete</button>
+    </div>
   </div>
 </li>
