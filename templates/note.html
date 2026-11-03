@@ -1,16 +1,3 @@
-<!-- 
-
-    OLD STYLE CARDS 
-
-  <li>
-    <a>
-      <h2>Public Note ID: {{note[4]}}</h2>
-      <h3>note written on: {{ note[2] }}</h3>
-      <p>{{ note[3] }}</p>
-    </a>
-  </li>
- -->
-
 <li class="card notes__card-wrapper">
   <div class="card-body notes__card-body">
     <h5 class="card-title notes__card-title">Public Note ID: {{note[5]}}</h5>
@@ -23,10 +10,20 @@
       <span class="notes__card-subtitle--date">{{ note[3] }}</span>
     </h6>
     <p class="card-text">{{ note[4] }}</p>
-    {% if note[6] %}
-      <img src="{{ note[6] }}" alt="note image" style="max-width:100%; margin-top:10px;">
+    {% if note[8] %}
+      <img src="{{ note[8] }}" alt="note image" style="max-width:100%; margin-top:10px;">
     {% endif %}
-    
-
+    <div class="notes__card-actions">
+      {% if note[7] == 0 %}
+      <form action="{{ url_for('toggle_public', note_id=note[0]) }}" method="post">
+        <button type="submit" class="btn-outline-sm">
+          {{ "Unpublish" if note[6] else "Publish" }}
+        </button>
+      </form>
+      {% else %}
+      <span class="notes__card-subtitle">Imported</span>
+      {% endif %}
+      <button class="btn-outline-sm">Delete</button>
+    </div>
   </div>
 </li>
