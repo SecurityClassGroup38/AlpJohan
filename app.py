@@ -42,6 +42,7 @@ CREATE TABLE users (
 app = Flask(__name__)
 app.database = "db.sqlite3"
 UPLOAD_FOLDER = os.path.join("static", "uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 ALLOWED_IMAGE_EXT = {"png", "jpg", "jpeg", "gif"}
 
 def allowed_image(filename):
