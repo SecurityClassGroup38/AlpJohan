@@ -1,0 +1,3 @@
+Flask
+WeasyPrint==61.2
+pydyf==0.8.0
