@@ -77,6 +77,9 @@
         <li class="nav-item">
           <a class="nav-link page-scroll" href="/login/">LOGIN</a>
         </li>
+        <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('reset_password') }}">FORGOT PASSWORD?</a>
+        </li>
 
       </ul>
       <span class="nav-item social-icons">
@@ -121,6 +124,7 @@
             <div class="p-large">
               <div><a href="/register/" class="p-large">or click here to register</a></div>
             </div>
+             <div><a href="{{ url_for('reset_password') }}" class="p-large">forgot your password?</a></div>
           </div> <!-- end of col -->
         </div> <!-- end of row -->
       </div> <!-- end of container -->

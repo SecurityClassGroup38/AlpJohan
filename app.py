@@ -2,6 +2,8 @@ import json, sqlite3, click, functools, os, hashlib,time, secrets, sys
 from flask import Flask, current_app, g, session, redirect, render_template, url_for, request
 from werkzeug.security import generate_password_hash, check_password_hash
 
+
+
 ### DATABASE FUNCTIONS ###
 
 def connect_db():
@@ -37,7 +39,6 @@ INSERT INTO notes VALUES(null,2,2,"1993-09-23 10:10:10","hello my friend",123456
 INSERT INTO notes VALUES(null,2,2,"1993-09-23 12:10:10","i want lunch pls",1234567891);
 
 """)
-
 
 
 ### APPLICATION SETUP ###
@@ -239,6 +240,34 @@ def logout():
     """Logout: clears the session"""
     session.clear()
     return redirect(url_for('index'))
+
+
+@app.route("/reset/", methods=('GET', 'POST'))
+def reset_password():
+    usererror = ""
+    emailerror = ""
+    show_popup = False
+
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip()
+
+        db = connect_db()
+        c = db.cursor()
+        c.execute("SELECT 1 FROM users WHERE username = ?;", (username,))
+        user_exists = c.fetchone() is not None
+        db.close()
+
+        if not user_exists:
+            usererror = "No user with that username!"
+        if "@" not in email:
+            emailerror = "Please enter a valid email address."
+
+        if not usererror and not emailerror:
+            show_popup = True
+
+    return render_template('reset.html', usererror=usererror,
+                           emailerror=emailerror, show_popup=show_popup)
 
 if __name__ == "__main__":
     #create database if it doesn't exist yet
