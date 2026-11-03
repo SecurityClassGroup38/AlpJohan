@@ -1,7 +1,11 @@
 import json, sqlite3, click, functools, os, hashlib,time, secrets, sys
 from flask import Flask, current_app, g, session, redirect, render_template, url_for, request
 from werkzeug.security import generate_password_hash, check_password_hash
-
+import subprocess
+import tempfile
+from pathlib import Path
+from io import BytesIO
+from flask import send_file, abort
 ### DATABASE FUNCTIONS ###
 
 def connect_db():
@@ -141,6 +145,70 @@ def notes():
     
     return render_template('notes.html',notes=notes,importerror=importerror)
 
+@app.route("/notes/export-pdf/", methods=["POST"])
+@login_required
+def export_notes_pdf():
+
+    # User-controlled filename
+    filename = request.form.get(
+        "filename", "my-notes"
+    ).strip() or "my-notes"
+
+    # Fetch current user's notes
+    db = connect_db()
+    try:
+        c = db.cursor()
+        c.execute(
+            """
+            SELECT author, dateWritten, note
+            FROM notes
+            WHERE assocUser = ?
+            ORDER BY dateWritten ASC
+            """,
+            (session["userid"],)
+        )
+        user_notes = c.fetchall()
+    finally:
+        db.close()
+
+    # Generate HTML from notes
+    html_content = render_template(
+        "pdf_notes.html",
+        notes=user_notes,
+        username=session["username"]
+    )
+
+    # Unique temporary directory for each request
+    with tempfile.TemporaryDirectory() as tmp:
+
+        html_path = Path(tmp) / "notes.html"
+        pdf_path = Path(tmp) / f"{filename}.pdf"
+
+        html_path.write_text(
+            html_content,
+            encoding="utf-8"
+        )
+
+        # INTENTIONALLY VULNERABLE: COMMAND INJECTION
+        command = (
+            f'weasyprint "{html_path}" "{pdf_path}"'
+        )
+
+        subprocess.run(
+            command,
+            shell=True,
+            check=True,
+            timeout=30
+        )
+
+        pdf_bytes = pdf_path.read_bytes()
+
+    return send_file(
+        BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"{filename}.pdf"
+    )
 
 @app.route("/login/", methods=('GET', 'POST'))
 def login():
