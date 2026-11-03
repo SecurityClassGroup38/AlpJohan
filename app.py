@@ -1,9 +1,7 @@
-import json, sqlite3, click, functools, os, hashlib,time, secrets, sys
-from flask import Flask, current_app, g, session, redirect, render_template, url_for, request
+import json, sqlite3, click, functools, os, hashlib, time, secrets, sys, io, re, zipfile
+from flask import Flask, current_app, g, session, redirect, render_template, url_for, request, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-
-
 
 ### DATABASE FUNCTIONS ###
 
@@ -25,7 +23,10 @@ CREATE TABLE notes (
     author TEXT NOT NULL,
     dateWritten DATETIME NOT NULL,
     note TEXT NOT NULL,
-    publicID INTEGER NOT NULL
+    publicID INTEGER NOT NULL,
+    public INTEGER NOT NULL DEFAULT 0,
+    imported INTEGER NOT NULL DEFAULT 0,
+    imagePath TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE users (
@@ -33,11 +34,6 @@ CREATE TABLE users (
     username TEXT NOT NULL,
     password TEXT NOT NULL
 );
-
-INSERT INTO users VALUES(null,"admin", "password");
-INSERT INTO users VALUES(null,"bernardo", "omgMPC");
-INSERT INTO notes VALUES(null,2,2,"1993-09-23 10:10:10","hello my friend",1234567890);
-INSERT INTO notes VALUES(null,2,2,"1993-09-23 12:10:10","i want lunch pls",1234567891);
 
 """)
 
@@ -50,6 +46,7 @@ ALLOWED_IMAGE_EXT = {"png", "jpg", "jpeg", "gif"}
 
 def allowed_image(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_IMAGE_EXT
+
 app.secret_key = os.urandom(32) ## might be a vulnerability
 
 ### ADMINISTRATOR'S PANEL ###
@@ -86,6 +83,7 @@ def notes():
         if request.form['submit_button'] == 'add note':
             note = request.form['noteinput']
 
+            # optional image upload (SAFE: cleaned filename + type check only)
             imagepath = ""
             file = request.files.get('noteimage')
             if file and file.filename != "" and allowed_image(file.filename):
@@ -108,36 +106,31 @@ def notes():
             c.execute(statement, params)
             db.commit()
             db.close()
+
         elif request.form['submit_button'] == 'import note':
             noteid = request.form['noteid']
             db = connect_db()
             c = db.cursor()
-            ## sql injection problem, can be used to run SELECT statements -FIXED
             statement = """SELECT * from NOTES where publicID = ?"""
             params = (noteid,)
-
             c.execute(statement, params)
-            ## result is a list of lists
             result = c.fetchall()
             if(len(result)>0):
-                # every user have a list of notes, and one note is a list by itself with the information fields about the note
-        
-                # row is a single list of the individual note
-                # row is the first note with that searched noteid
                 row = result[0]
-                # Risk of SQL injection - FIXED
-                statement = """INSERT INTO notes(id,assocUser,author,dateWritten,note,publicID) VALUES(null,?,?,?,?,?);""" 
-                # add author of note (integrety)
-                params = (session['userid'],row[2],row[3],row[4],row[5],)
-                # when you import a note, its duplicated with the same date, noteid, and note fields are same
-                # but userid is updated with importer 
-                # so this 'if check' will get more than one outputs for noteid check, and only insert the first one
-                # This creates an integrety problem, as the original author will be changed
+                statement = """INSERT INTO notes(id,assocUser,author,dateWritten,note,publicID,imported)
+               VALUES(null,?,?,?,?,?,1);"""
+                params = (
+                    session['userid'],
+                    row[2],
+                    row[3],
+                    row[4],
+                    row[5],)
                 c.execute(statement, params)
             else:
                 importerror="No such note with that ID!"
             db.commit()
             db.close()
+
         elif request.form['submit_button'] == 'delete note':
             noteid = request.form['noteid']
             db = connect_db()
@@ -148,19 +141,35 @@ def notes():
             c.execute(statement, params)
             db.commit()
             db.close()
-    
+
+        elif request.form['submit_button'] == 'download zip':
+            raw = request.form.get('zipname', 'notes')
+            safe_name = re.sub(r'[^A-Za-z0-9_-]', '', raw)[:50]
+            if not safe_name:
+                safe_name = 'notes'
+
+            db = connect_db()
+            c = db.cursor()
+            c.execute("SELECT * FROM notes WHERE assocUser = ?;", (session['userid'],))
+            user_notes = c.fetchall()
+            db.close()
+
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+                for n in user_notes:
+                    zf.writestr(f"note_{n[0]}.txt", str(n[4]))
+            buffer.seek(0)
+
+            return send_file(buffer, mimetype='application/zip',
+                             as_attachment=True, download_name=f"{safe_name}.zip")
+
     db = connect_db()
     c = db.cursor()
-    # Runs when we open the page
-
-    #SQL injection - FIXED
     statement = "SELECT * FROM notes WHERE assocUser = ?;"
     params = (session['userid'],)
-    
     c.execute(statement, params)
     notes = c.fetchall()
     print(notes)
-    
     return render_template('notes.html',notes=notes,importerror=importerror)
 
 
@@ -172,29 +181,20 @@ def login():
         password = request.form['password']
         db = connect_db()
         c = db.cursor()
-        
-    
-        # Allows for injection - FIXED 
-        # password should be hashed (idea: concatinate username and password before hash, this will create unique hashes) 
         statement = "SELECT * FROM users WHERE username = ?;"
-        params = (username,) 
-
+        params = (username,)
         c.execute(statement, params)
         result = c.fetchall()
         if(len(result)!= 0):
             stored_hash = result[0][2]
-            print("Stored hash: " + stored_hash + " User input: " + password  )
             if check_password_hash(stored_hash, password):
                 session.clear()
-                # we are both using "logged in", "user ID", and "username" in a session, 
-                # this can be redundant and possibly a risk (if loggedIn is not reset on logout)
                 session['logged_in'] = True
                 session['userid'] = result[0][0]
                 session['username']=result[0][1]
                 return redirect(url_for('index'))
             else:
-                        error = "Wrong username or password!"
-        
+                error = "Wrong username or password!"
         else:
             error = "Wrong username or password!"
     return render_template('login.html',error=error)
@@ -203,18 +203,13 @@ def login():
 @app.route("/register/", methods=('GET', 'POST'))
 def register():
     errored = False
-    # get rid of password error (deos not have to be unique), however can be changed to enforce strong passwords
     usererror = ""
     passworderror = ""
     if request.method == 'POST':
-        
-
         username = request.form['username']
         password = request.form['password']
         db = connect_db()
         c = db.cursor()
-        # sanitize input, to avoid SQL injection - FIXED
-        # delete passStatement + first if statement -FIXED
         user_statement = """SELECT * FROM users WHERE username = ?;"""
         params = (username,)
 
@@ -228,16 +223,12 @@ def register():
             usererror = "That username is already in use by someone else!"
 
         if(not errored):
-            # sanitize input to avoid SQL injection - FIXED
-            # Password should be hashed before being inserted, make sure that password checks are alligned,
             hashed_password = generate_password_hash(
                 password,
                 method="pbkdf2:sha256:600000"
             )
-            print("Hashed pass: " + hashed_password + " User input: " + password  )
             statement = """INSERT INTO users(id,username,password) VALUES(null,?,?);"""
             params = (username, hashed_password,)
-
             c.execute(statement, params)
             db.commit()
             db.close()
@@ -290,15 +281,43 @@ def reset_password():
     return render_template('reset.html', usererror=usererror,
                            emailerror=emailerror, show_popup=show_popup)
 
+
+@app.route("/notes/<int:note_id>/toggle_public", methods=('POST',))
+@login_required
+def toggle_public(note_id):
+    db = connect_db()
+    c = db.cursor()
+    c.execute(
+        """UPDATE notes SET public = 1 - public
+           WHERE id = ? AND assocUser = ? AND imported = 0;""",
+        (note_id, session['userid']),
+    )
+    db.commit()
+    db.close()
+    return redirect(url_for('notes'))
+
+
+@app.route("/feed/")
+@login_required
+def feed():
+    db = connect_db()
+    c = db.cursor()
+    c.execute(
+        """SELECT author, dateWritten, note, publicID FROM notes
+           WHERE public = 1 ORDER BY dateWritten DESC;"""
+    )
+    feed_notes = c.fetchall()
+    db.close()
+    return render_template('feed.html', feed_notes=feed_notes)
+
 if __name__ == "__main__":
-    #create database if it doesn't exist yet
     if not os.path.exists(app.database):
         init_db()
     runport = 5000
     if(len(sys.argv)==2):
         runport = sys.argv[1]
     try:
-        app.run(host='0.0.0.0', port=runport) # runs on machine ip address to make it visible on netowrk
+        app.run(host='0.0.0.0', port=runport)
     except:
         print("Something went wrong. the usage of the server is either")
         print("'python3 app.py' (to start on port 5000)")
