@@ -127,6 +127,16 @@ def notes():
                 importerror="No such note with that ID!"
             db.commit()
             db.close()
+        elif request.form['submit_button'] == 'delete note':
+            noteid = request.form['noteid']
+            db = connect_db()
+            c = db.cursor()
+            # SAFE: parameterized, not injectable. Only deletes YOUR own note.
+            statement = "DELETE FROM notes WHERE publicID = ? AND assocUser = ?"
+            params = (noteid, session['userid'])
+            c.execute(statement, params)
+            db.commit()
+            db.close()
     
     db = connect_db()
     c = db.cursor()
