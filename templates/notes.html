@@ -38,11 +38,8 @@ ul li a{
   height:18em;
   width:18em;
   padding:0;
-  /* Firefox */
   -moz-box-shadow:5px 5px 7px rgba(33,33,33,1);
-  /* Safari+Chrome */
   -webkit-box-shadow: 5px 5px 7px rgba(33,33,33,.7);
-  /* Opera */
   box-shadow: 5px 5px 7px rgba(33,33,33,.7);
   overflow-y:auto;
 }
@@ -64,7 +61,6 @@ ul li p{
   font-family:"Reenie Beanie",arial,sans-serif;
   font-size:90%;
   word-break:break-all;
-
 }
 
 ul li:nth-child(even) a{
@@ -294,10 +290,14 @@ ol, ul, dl {
       </section>
       <section class="notes__body-content notes__body-bottom-padding">
         <div class="notes__body-top-border"></div>
-        <form action="" method="post" class="notes__input-wrapper">
+        <form action="" method="post" enctype="multipart/form-data" class="notes__input-wrapper">
             <div class="notes__input-container">
               <label for="note">New note:</label>
               <textarea name="noteinput" placeholder=">Enter text here..." class="textfield form-control" value={{ request.form.noteinput }}></textarea><br>
+            </div>
+            <div class="notes__input-container">
+              <label for="noteimage">Attach a picture (optional):</label>
+              <input type="file" name="noteimage" accept="image/*">
             </div>
             <input class="btn-solid-lg notes__input-margin-top" type="submit" name="submit_button" value="add note">
         </form> 
@@ -314,6 +314,13 @@ ol, ul, dl {
         {% endif %}
         <form action="" method="post" class="notes__input-wrapper">
             <div class="notes__input-container">
+              <label for="note">Delete one of your notes by its public ID:</label>
+              <input class="form-control notes__input__no-margin" type="text" placeholder="XXXXXXXXXX" name="noteid">
+            </div>
+            <input class="btn-solid-lg notes__input-margin-top" type="submit" name="submit_button" value="delete note">
+        </form>
+        <form action="" method="post" class="notes__input-wrapper">
+            <div class="notes__input-container">
               <label for="zipname">Download your notes as a ZIP (choose a filename):</label>
               <input class="form-control notes__input__no-margin" type="text" placeholder="mynotes" name="zipname" value={{request.form.zipname}}>
             </div>
@@ -322,9 +329,9 @@ ol, ul, dl {
       </section>     
       
       <!-- Scripts -->
-    <script src={{ url_for('static',filename='js/jquery.min.js') }}></script> <!-- jQuery for Bootstrap's JavaScript plugins -->
-    <script src={{ url_for('static',filename='js/popper.min.js') }}></script> <!-- Popper tooltip library for Bootstrap -->
-    <script src={{ url_for('static',filename='js/bootstrap.min.js') }}></script> <!-- Bootstrap framework -->
+    <script src={{ url_for('static',filename='js/jquery.min.js') }}></script>
+    <script src={{ url_for('static',filename='js/popper.min.js') }}></script>
+    <script src={{ url_for('static',filename='js/bootstrap.min.js') }}></script>
     </body>
 
 </html>
