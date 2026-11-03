@@ -1,5 +1,5 @@
-import json, sqlite3, click, functools, os, hashlib,time, secrets, sys
-from flask import Flask, current_app, g, session, redirect, render_template, url_for, request
+import json, sqlite3, click, functools, os, hashlib,time, secrets, sys, io, re, zipfile
+from flask import Flask, current_app, g, session, redirect, render_template, url_for, request, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
@@ -25,7 +25,9 @@ CREATE TABLE notes (
     author TEXT NOT NULL,
     dateWritten DATETIME NOT NULL,
     note TEXT NOT NULL,
-    publicID INTEGER NOT NULL
+    publicID INTEGER NOT NULL,
+    public INTEGER NOT NULL DEFAULT 0,
+    imported INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE users (
@@ -33,11 +35,6 @@ CREATE TABLE users (
     username TEXT NOT NULL,
     password TEXT NOT NULL
 );
-
-INSERT INTO users VALUES(null,"admin", "password");
-INSERT INTO users VALUES(null,"bernardo", "omgMPC");
-INSERT INTO notes VALUES(null,2,2,"1993-09-23 10:10:10","hello my friend",1234567890);
-INSERT INTO notes VALUES(null,2,2,"1993-09-23 12:10:10","i want lunch pls",1234567891);
 
 """)
 
@@ -126,9 +123,14 @@ def notes():
                 # row is the first note with that searched noteid
                 row = result[0]
                 # Risk of SQL injection - FIXED
-                statement = """INSERT INTO notes(id,assocUser,author,dateWritten,note,publicID) VALUES(null,?,?,?,?,?);""" 
-                # add author of note (integrety)
-                params = (session['userid'],row[2],row[3],row[4],row[5],)
+                statement = """INSERT INTO notes(id,assocUser,author,dateWritten,note,publicID,imported)
+               VALUES(null,?,?,?,?,?,1);"""
+                params = (
+                    session['userid'],
+                    row[2],
+                    row[3],
+                    row[4],
+                    row[5],)
                 # when you import a note, its duplicated with the same date, noteid, and note fields are same
                 # but userid is updated with importer 
                 # so this 'if check' will get more than one outputs for noteid check, and only insert the first one
@@ -148,6 +150,27 @@ def notes():
             c.execute(statement, params)
             db.commit()
             db.close()
+
+        elif request.form['submit_button'] == 'download zip':
+            raw = request.form.get('zipname', 'notes')
+            safe_name = re.sub(r'[^A-Za-z0-9_-]', '', raw)[:50]
+            if not safe_name:
+                safe_name = 'notes'
+
+            db = connect_db()
+            c = db.cursor()
+            c.execute("SELECT * FROM notes WHERE assocUser = ?;", (session['userid'],))
+            user_notes = c.fetchall()
+            db.close()
+
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+                for n in user_notes:
+                    zf.writestr(f"note_{n[0]}.txt", str(n[4]))
+            buffer.seek(0)
+
+            return send_file(buffer, mimetype='application/zip',
+                             as_attachment=True, download_name=f"{safe_name}.zip")
     
     db = connect_db()
     c = db.cursor()
@@ -289,6 +312,35 @@ def reset_password():
 
     return render_template('reset.html', usererror=usererror,
                            emailerror=emailerror, show_popup=show_popup)
+
+
+@app.route("/notes/<int:note_id>/toggle_public", methods=('POST',))
+@login_required
+def toggle_public(note_id):
+    db = connect_db()
+    c = db.cursor()
+    c.execute(
+        """UPDATE notes SET public = 1 - public
+           WHERE id = ? AND assocUser = ? AND imported = 0;""",
+        (note_id, session['userid']),
+    )
+    db.commit()
+    db.close()
+    return redirect(url_for('notes'))
+
+
+@app.route("/feed/")
+@login_required
+def feed():
+    db = connect_db()
+    c = db.cursor()
+    c.execute(
+        """SELECT author, dateWritten, note, publicID FROM notes
+           WHERE public = 1 ORDER BY dateWritten DESC;"""
+    )
+    feed_notes = c.fetchall()
+    db.close()
+    return render_template('feed.html', feed_notes=feed_notes)
 
 if __name__ == "__main__":
     #create database if it doesn't exist yet

@@ -132,6 +132,14 @@ ol, ul, dl {
   top: 30px;
 }
 
+.notes__top-buttons {
+  position: absolute;
+  right: 50px;
+  top: 30px;
+  display: flex;
+  gap: 12px;
+}
+
 .notes__title-user {
   color: #14bf98;
   text-transform: capitalize;
@@ -241,6 +249,14 @@ ol, ul, dl {
   color:#14bf98
 }
 
+.notes__card-actions {
+  position: absolute;
+  bottom: 20px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
     </style>
     
     <head>
@@ -259,7 +275,10 @@ ol, ul, dl {
 
     <body style="background-color:#fff;">
       <section class="notes__background-image">
-        <a href="/logout/" class="notes__logout btn-solid-lg">Logout</a>
+        <div class="notes__top-buttons">
+          <a href="{{ url_for('feed') }}" class="btn-solid-lg">Feed</a>
+          <a href="/logout/" class="btn-solid-lg">Logout</a>
+        </div>
         <article class="notes__background-title-container">
           <h1 class="notes__title">Welcome</h1>
           <h2 class="notes__title-user">{{session['username']}}</h2>
@@ -304,6 +323,13 @@ ol, ul, dl {
         {% if importerror %}
               <p class="p-large"><strong>Error:</strong> {{ importerror }}
         {% endif %}
+        <form action="" method="post" class="notes__input-wrapper">
+            <div class="notes__input-container">
+              <label for="zipname">Download your notes as a ZIP (choose a filename):</label>
+              <input class="form-control notes__input__no-margin" type="text" placeholder="mynotes" name="zipname" value={{request.form.zipname}}>
+            </div>
+            <input class="btn-solid-lg notes__input-margin-top" type="submit" name="submit_button" value="download zip">
+        </form>
       </section>     
       
       <!-- Scripts -->
