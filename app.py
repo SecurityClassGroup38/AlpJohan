@@ -1,6 +1,7 @@
 import json, sqlite3, click, functools, os, hashlib,time, secrets, sys
 from flask import Flask, current_app, g, session, redirect, render_template, url_for, request
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 
 
 
@@ -44,6 +45,11 @@ INSERT INTO notes VALUES(null,2,2,"1993-09-23 12:10:10","i want lunch pls",12345
 ### APPLICATION SETUP ###
 app = Flask(__name__)
 app.database = "db.sqlite3"
+UPLOAD_FOLDER = os.path.join("static", "uploads")
+ALLOWED_IMAGE_EXT = {"png", "jpg", "jpeg", "gif"}
+
+def allowed_image(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_IMAGE_EXT
 app.secret_key = os.urandom(32) ## might be a vulnerability
 
 ### ADMINISTRATOR'S PANEL ###
@@ -79,21 +85,26 @@ def notes():
     if request.method == 'POST':
         if request.form['submit_button'] == 'add note':
             note = request.form['noteinput']
+
+            imagepath = ""
+            file = request.files.get('noteimage')
+            if file and file.filename != "" and allowed_image(file.filename):
+                safename = secrets.token_hex(8) + "_" + secure_filename(file.filename)
+                file.save(os.path.join(UPLOAD_FOLDER, safename))
+                imagepath = "/static/uploads/" + safename
+
             db = connect_db()
             c = db.cursor()
-            # line 77 has sql injection vulnerability - FIXED
-            # Possibility of duplicate IDs  
-        
-            statement = """INSERT INTO notes (id, assocUser, author, dateWritten, note, publicID)
-                   VALUES (NULL, ?, ?, ?, ?, ?)"""
+            statement = """INSERT INTO notes (id, assocUser, author, dateWritten, note, publicID, imagePath)
+                   VALUES (NULL, ?, ?, ?, ?, ?, ?)"""
             params = (
                 session['userid'],
                 session['username'],
                 time.strftime('%Y-%m-%d %H:%M:%S'),
                 note,
                 newNotePublicID(c),
+                imagepath,
             )
-
             c.execute(statement, params)
             db.commit()
             db.close()

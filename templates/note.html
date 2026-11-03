@@ -23,6 +23,9 @@
       <span class="notes__card-subtitle--date">{{ note[3] }}</span>
     </h6>
     <p class="card-text">{{ note[4] }}</p>
+    {% if note[6] %}
+      <img src="{{ note[6] }}" alt="note image" style="max-width:100%; margin-top:10px;">
+    {% endif %}
     
 
   </div>
