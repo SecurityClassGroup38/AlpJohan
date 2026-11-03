@@ -2,6 +2,11 @@ import json, sqlite3, click, functools, os, hashlib,time, secrets, sys
 from flask import Flask, current_app, g, session, redirect, render_template, url_for, request
 from werkzeug.security import generate_password_hash, check_password_hash
 
+import smtplib
+from email.message import EmailMessage
+from dotenv import load_dotenv
+
+
 ### DATABASE FUNCTIONS ###
 
 def connect_db():
@@ -38,6 +43,35 @@ INSERT INTO notes VALUES(null,2,2,"1993-09-23 12:10:10","i want lunch pls",12345
 
 """)
 
+### MAIL SETUP ###
+load_dotenv()
+SMTP_HOST = os.environ.get("SMTP_HOST", "smtp-relay.brevo.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
+SMTP_USER = os.environ.get("SMTP_USER")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
+MAIL_FROM = os.environ.get("MAIL_FROM")
+
+def send_reset_mail(to_address):
+    if not (SMTP_USER and SMTP_PASSWORD and MAIL_FROM):
+        raise RuntimeError("SMTP_USER, SMTP_PASSWORD and MAIL_FROM must be set in .env")
+
+    msg = EmailMessage()
+    msg["Subject"] = "Your password reset request"
+    msg["From"] = MAIL_FROM
+    msg["To"] = to_address
+    msg.set_content(
+        "Hi,\n\n"
+        "We received a request to reset your password.\n\n"
+        "Unfortunately, we don't believe in second chances.\n"
+        "Try remembering harder.\n\n"
+        "Kind regards,\n"
+        "The Security Team"
+    )
+
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASSWORD)
+        server.send_message(msg)
 
 
 ### APPLICATION SETUP ###
@@ -239,6 +273,12 @@ def logout():
     """Logout: clears the session"""
     session.clear()
     return redirect(url_for('index'))
+
+
+@app.route("/reset/")
+def reset_password():
+    return render_template('reset.html')
+
 
 if __name__ == "__main__":
     #create database if it doesn't exist yet

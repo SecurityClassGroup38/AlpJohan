@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Reset password</title>
+  </head>
+  <body>
+    <h1>Reset password</h1>
+    <form id="reset-form">
+      <input type="text" id="username" placeholder="username" />
+      <input type="text" id="email" placeholder="Email address" />
+      <button type="submit">Restore password</button>
+    </form>
+    <p id="error" style="color: red"></p>
+
+    <script>
+      document
+        .getElementById("reset-form")
+        .addEventListener("submit", function (event) {
+          event.preventDefault();
+          const email = document.getElementById("email").value.trim();
+          const error = document.getElementById("error");
+
+          if (!email.includes("@")) {
+            error.textContent = "Please enter a valid email address.";
+            return;
+          }
+
+          error.textContent = "";
+          alert(
+            "Our mail service is currently down. So unfortunately you will have to remember your password..",
+          );
+        });
+    </script>
+  </body>
+</html>
