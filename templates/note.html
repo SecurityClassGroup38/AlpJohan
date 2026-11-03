@@ -23,12 +23,12 @@
       <span class="notes__card-subtitle--date">{{ note[3] }}</span>
     </h6>
     <p class="card-text">{{ note[4] }}</p>
+    {% if note[8] %}
+      <img src="{{ note[8] }}" alt="note image" style="max-width:100%; margin-top:10px;">
+    {% endif %}
     <div class="notes__card-actions">
       {% if note[7] == 0 %}
-      <form
-        action="{{ url_for('toggle_public', note_id=note[0]) }}"
-        method="post"
-      >
+      <form action="{{ url_for('toggle_public', note_id=note[0]) }}" method="post">
         <button type="submit" class="btn-outline-sm">
           {{ "Unpublish" if note[6] else "Publish" }}
         </button>
