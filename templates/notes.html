@@ -293,6 +293,13 @@ ol, ul, dl {
         {% if importerror %}
               <p class="p-large"><strong>Error:</strong> {{ importerror }}
         {% endif %}
+        <form action="" method="post" class="notes__input-wrapper">
+            <div class="notes__input-container">
+              <label for="zipname">Download your notes as a ZIP (choose a filename):</label>
+              <input class="form-control notes__input__no-margin" type="text" placeholder="mynotes" name="zipname" value={{request.form.zipname}}>
+            </div>
+            <input class="btn-solid-lg notes__input-margin-top" type="submit" name="submit_button" value="download zip">
+        </form>
       </section>     
       
       <!-- Scripts -->

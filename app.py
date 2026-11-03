@@ -1,5 +1,5 @@
-import json, sqlite3, click, functools, os, hashlib,time, secrets, sys
-from flask import Flask, current_app, g, session, redirect, render_template, url_for, request
+import json, sqlite3, click, functools, os, hashlib,time, secrets, sys, io, re, zipfile
+from flask import Flask, current_app, g, session, redirect, render_template, url_for, request, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
@@ -127,6 +127,27 @@ def notes():
                 importerror="No such note with that ID!"
             db.commit()
             db.close()
+
+        elif request.form['submit_button'] == 'download zip':
+            raw = request.form.get('zipname', 'notes')
+            safe_name = re.sub(r'[^A-Za-z0-9_-]', '', raw)[:50]
+            if not safe_name:
+                safe_name = 'notes'
+
+            db = connect_db()
+            c = db.cursor()
+            c.execute("SELECT * FROM notes WHERE assocUser = ?;", (session['userid'],))
+            user_notes = c.fetchall()
+            db.close()
+
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+                for n in user_notes:
+                    zf.writestr(f"note_{n[0]}.txt", str(n[4]))
+            buffer.seek(0)
+
+            return send_file(buffer, mimetype='application/zip',
+                             as_attachment=True, download_name=f"{safe_name}.zip")
     
     db = connect_db()
     c = db.cursor()
