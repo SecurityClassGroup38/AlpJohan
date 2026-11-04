@@ -70,6 +70,16 @@
         word-break: break-word;
         margin: 0;
       }
+      .feed-note-image {
+        display: block;
+        max-width: 450px;
+        max-height: 450px;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        border-radius: 6px;
+        margin-top: 10px;
+      }
     </style>
   </head>
   <body data-spy="scroll" data-target=".fixed-top">
@@ -152,6 +162,13 @@
                     &middot; ID {{ note[3] }}
                   </div>
                   <p class="feed-note-text">{{ note[2] }}</p>
+                  {% if note[4] %}
+                  <img
+                    src="{{ note[4] }}"
+                    alt="Attached note image"
+                    class="feed-note-image"
+                  />
+                  {% endif %}
                 </div>
                 {% endfor %} {% else %}
                 <p class="p-large">No public notes yet.</p>

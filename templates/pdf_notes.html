@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Exported Notes</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 30px;
+      }
+      .note {
+        padding: 15px;
+        border-bottom: 1px solid #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>My Secret Notes</h1>
+    <p>Exported by: {{ username }}</p>
+
+    {% for note in notes %}
+    <div class="note">
+      <p><strong>Author:</strong> {{ note[0] }}</p>
+      <p><strong>Date:</strong> {{ note[1] }}</p>
+      <p style="white-space: pre-wrap">{{ note[2] }}</p>
+    </div>
+    {% endfor %}
+  </body>
+</html>
